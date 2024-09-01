@@ -132,7 +132,7 @@ class Dataset(Dataset):
             image_2 = self.preprocess(pil_image)
             list_of_dicts[j]['image_2'] = image_2
 
-            # txt tgt and src
+            # txt: tgt and src
             target_prompt = list_of_dicts[j]['target_prompt']
             source_prompt = list_of_dicts[j]['source_prompt']
             text_input_source = self.tokenizer(source_prompt,
