@@ -7,13 +7,13 @@
 '''
 
 import os
-from config.options import *
-from config.utils import *
-from config.learning_rates import get_learning_rate_scheduler
+from train.src.config.options import *
+from train.src.config.utils import *
+from train.src.config.learning_rates import get_learning_rate_scheduler
 os.environ['CUDA_VISIBLE_DEVICES'] = opts.gpu_id
 opts.BatchSize = opts.batch_size * opts.accumulation_steps * opts.gpu_num
 
-from ImageReward import ImageReward
+from train.src.ImageReward import ImageReward as IR_train
 
 import torch
 from torch.utils.data import DataLoader
@@ -85,11 +85,10 @@ def run_train(train_dataset,
     opts.train_iters = opts.epochs * len(train_loader)
     steps_per_valid = len(train_loader) // opts.valid_per_epoch
     print("len(train_dataset) = ", len(train_dataset))
-    print("train_dataset.iters_per_epoch = ", train_dataset.iters_per_epoch)
     print("len(train_loader) = ", len(train_loader))
     print("steps_per_valid = ", steps_per_valid)
 
-    model = ImageReward(device).to(device)
+    model = IR_train(device).to(device)
     
     if opts.preload_path:
         model = preload_model(model)
@@ -98,7 +97,6 @@ def run_train(train_dataset,
     scheduler = get_learning_rate_scheduler(optimizer, opts)
     if opts.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model)
-
 
     # valid result print and log
     if get_rank() == 0:

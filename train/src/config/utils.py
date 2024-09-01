@@ -10,7 +10,7 @@
 import os, shutil
 import torch
 from tensorboardX import SummaryWriter
-from config.options import *
+from train.src.config.options import *
 import torch.distributed as dist
 
 
