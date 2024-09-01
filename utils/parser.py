@@ -5,10 +5,13 @@ import os
 
 class Parser:
 
+    # -----------------------------------------------------
     def __init__(self, path_to_datas):
         self.path_to_datas = path_to_datas
         self.files = os.listdir(path_to_datas)
         print(f'The following files will be parsed: {self.files}')
+    # -----------------------------------------------------
+
 
     # -----------------------------------------------------
     def raw_to_df(self):
@@ -24,15 +27,12 @@ class Parser:
         return df
     # -----------------------------------------------------
 
-    # -----------------------------------------------------
-    def _choose_best(self, item):
-        return max(set(item), key=item.count)
-    # -----------------------------------------------------
 
     # -----------------------------------------------------
     def _create_df(self, inp, preds):
         dict_df = {'source_prompt': [],
                    'target_prompt': [],
+                   'image_source': [],
                    'image_1': [],
                    'image_2': [],
                    'result': [],
@@ -42,6 +42,7 @@ class Parser:
             if task_id in dict_df['task_id']:
                 continue
             dict_df['task_id'].append(task_id)
+            dict_df['image_source'].append(el['inputValues']["orig_image"])
             dict_df['image_1'].append(el['inputValues']["image_1"])
             dict_df['image_2'].append(el['inputValues']["image_2"])
             dict_df['source_prompt'].append(el['inputValues']["orig_text"])
@@ -50,6 +51,7 @@ class Parser:
 
         return dict_df
     # -----------------------------------------------------
+
 
     # -----------------------------------------------------
     def _factor_mean(self, inp, factor):
@@ -65,7 +67,7 @@ class Parser:
 
         val_new = {}
         for key in vals.keys():
-            val_new[key] = self._choose_best(vals[key])
+            val_new[key] = max(set(vals[key]), key=vals[key].count)
 
         return val_new
     # -----------------------------------------------------
