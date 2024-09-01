@@ -9,6 +9,7 @@ class Parser:
     def __init__(self, path_to_datas):
         self.path_to_datas = path_to_datas
         self.files = os.listdir(path_to_datas)
+        self.files = [file for file in self.files if 'ours' in file]
         print(f'The following files will be parsed: {self.files}')
     # -----------------------------------------------------
 
