@@ -139,11 +139,11 @@ class ImageReward(nn.Module):
         img_worse = img_worse.to(self.device) # [batch_size, C, H, W]
 
         # encode source emb
-        image_embeds_source = self.blip.visual_encoder(img_source)
+        image_embeds_source = self.blip.visual_encoder(img_source.to(self.device))
         
         # encode better emb
-        image_embeds_better = self.blip.visual_encoder(img_better)
-        image_embeds_better = torch.cat((image_embeds_better, image_embeds_source), dim=0)
+        image_embeds_better = self.blip.visual_encoder(img_better.to(self.device))
+        image_embeds_better = torch.cat((image_embeds_better, image_embeds_source), dim=1)
         image_atts_better = torch.ones(image_embeds_better.size()[:-1], dtype=torch.long).to(self.device)
         emb_better = self.blip.text_encoder(text_ids,
                                             attention_mask = text_mask,
@@ -154,8 +154,8 @@ class ImageReward(nn.Module):
         emb_better = emb_better[:, 0, :].float()
         
         # encode worse emb
-        image_embeds_worse = self.blip.visual_encoder(img_worse)
-        image_embeds_worse = torch.cat((image_embeds_worse, image_embeds_source), dim=0)
+        image_embeds_worse = self.blip.visual_encoder(img_worse.to(self.device))
+        image_embeds_worse = torch.cat((image_embeds_worse, image_embeds_source), dim=1)
         image_atts_worse = torch.ones(image_embeds_worse.size()[:-1], dtype=torch.long).to(self.device)
         emb_worse = self.blip.text_encoder(text_ids,
                                             attention_mask = text_mask,
