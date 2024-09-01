@@ -8,4 +8,3 @@ df = parser.raw_to_df()
 dataset = Dataset(df,
                   local_path=root)
 print(dataset[0])
-print('ti pidor')
