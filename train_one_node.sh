@@ -1,11 +1,11 @@
 #! /bin/bash
 
 NUM_GPUS_PER_WORKER=2
-MASTER_PORT=29500
+MASTER_PORT=29501
 
 train_options=" \
        --savepath blip_uni_cross_mul \
-       --batch_size 4 \
+       --batch_size 32 \
        --accumulation_steps 4 \
        --epochs 10 \
        --distributed True \
