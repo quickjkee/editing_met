@@ -113,7 +113,7 @@ class Dataset(Dataset):
             # img1
             img_1_url = item['image_1']
             if self.local_path is not None:
-                splitted_path = img_source_url.split('yandex-research')
+                splitted_path = img_1_url.split('yandex-research')
                 path = f'{self.local_path}/{splitted_path[-1]}'
                 pil_image = open_img(path)
             else:
@@ -124,7 +124,7 @@ class Dataset(Dataset):
             # img2
             img_2_url = item['image_2']
             if self.local_path is not None:
-                splitted_path = img_source_url.split('yandex-research')
+                splitted_path = img_2_url.split('yandex-research')
                 path = f'{self.local_path}/{splitted_path[-1]}'
                 pil_image = open_img(path)
             else:
