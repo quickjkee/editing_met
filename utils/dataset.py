@@ -102,9 +102,8 @@ class Dataset(Dataset):
             # img_source
             img_source_url = item['image_source']
             if self.local_path is not None:
-                splitted_path = img_source_url.split('/')
-                main_path = f'{splitted_path[-3]}/{splitted_path[-2]}/{splitted_path[-1]}'
-                path = f'{self.local_path}/{main_path}'
+                splitted_path = img_source_url.split('yandex-research')
+                path = f'{self.local_path}/{splitted_path[-1]}'
                 pil_image = open_img(path)
             else:
                 pil_image = url_to_img(img_source_url)
@@ -114,9 +113,8 @@ class Dataset(Dataset):
             # img1
             img_1_url = item['image_1']
             if self.local_path is not None:
-                splitted_path = img_1_url.split('/')
-                main_path = f'{splitted_path[-3]}/{splitted_path[-2]}/{splitted_path[-1]}'
-                path = f'{self.local_path}/{main_path}'
+                splitted_path = img_source_url.split('yandex-research')
+                path = f'{self.local_path}/{splitted_path[-1]}'
                 pil_image = open_img(path)
             else:
                 pil_image = url_to_img(img_1_url)
@@ -126,9 +124,8 @@ class Dataset(Dataset):
             # img2
             img_2_url = item['image_2']
             if self.local_path is not None:
-                splitted_path = img_2_url.split('/')
-                main_path = f'{splitted_path[-3]}/{splitted_path[-2]}/{splitted_path[-1]}'
-                path = f'{self.local_path}/{main_path}'
+                splitted_path = img_source_url.split('yandex-research')
+                path = f'{self.local_path}/{splitted_path[-1]}'
                 pil_image = open_img(path)
             else:
                 pil_image = url_to_img(img_2_url)
