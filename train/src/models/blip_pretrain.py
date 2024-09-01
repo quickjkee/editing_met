@@ -2,7 +2,7 @@
  * Adapted from BLIP (https://github.com/salesforce/BLIP)
 '''
 
-from models.med import BertConfig, BertModel, BertLMHeadModel
+from train.src.models.med import BertConfig, BertModel, BertLMHeadModel
 from transformers import BertTokenizer
 import transformers
 transformers.logging.set_verbosity_error()
@@ -11,9 +11,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from models.blip import create_vit, init_tokenizer, load_checkpoint
-from config.options import *
-from config.utils import *
+from train.src.models.blip import create_vit, init_tokenizer, load_checkpoint
+from train.src.config.options import *
+from train.src.config.utils import *
 
 class BLIP_Pretrain(nn.Module):
     def __init__(self,                 

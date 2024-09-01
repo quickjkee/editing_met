@@ -5,7 +5,7 @@
 import warnings
 warnings.filterwarnings("ignore")
 
-from models.vit import VisionTransformer, interpolate_pos_embed
+from train.src.models.vit import VisionTransformer, interpolate_pos_embed
 from transformers import BertTokenizer
 
 import torch
