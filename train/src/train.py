@@ -13,8 +13,6 @@ from config.learning_rates import get_learning_rate_scheduler
 os.environ['CUDA_VISIBLE_DEVICES'] = opts.gpu_id
 opts.BatchSize = opts.batch_size * opts.accumulation_steps * opts.gpu_num
 
-from rank_dataset import rank_dataset
-from rank_pair_dataset import rank_pair_dataset
 from ImageReward import ImageReward
 
 import torch
@@ -54,7 +52,9 @@ def loss_func(reward):
     return loss, loss_list, acc
 
 
-if __name__ == "__main__":
+def run_train(train_dataset,
+              valid_dataset,
+              test_dataset):
     
     if opts.std_log:
         std_log()
@@ -71,15 +71,6 @@ if __name__ == "__main__":
         init_seeds(opts.seed)
 
     writer = visualizer()
-
-    if opts.rank_pair:
-        train_dataset = rank_pair_dataset("train")
-        valid_dataset = rank_pair_dataset("valid")
-        test_dataset = rank_pair_dataset("test")
-    else:
-        train_dataset = rank_dataset("train")
-        valid_dataset = rank_dataset("valid")
-        test_dataset = rank_dataset("test")
     
     if opts.distributed:
         train_sampler = DistributedSampler(train_dataset)
@@ -130,9 +121,6 @@ if __name__ == "__main__":
 
     best_loss = 1e9
     optimizer.zero_grad()
-    # fix_rate_list = [float(i) / 10 for i in reversed(range(10))]
-    # fix_epoch_edge = [opts.epochs / (len(fix_rate_list)+1) * i for i in range(1, len(fix_rate_list)+1)]
-    # fix_rate_idx = 0
     losses = []
     acc_list = []
     for epoch in range(opts.epochs):

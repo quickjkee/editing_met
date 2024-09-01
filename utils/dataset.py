@@ -108,7 +108,7 @@ class Dataset(Dataset):
             else:
                 pil_image = url_to_img(img_source_url)
             image_1 = self.preprocess(pil_image)
-            list_of_dicts[j]['image_source'] = image_1
+            list_of_dicts[j]['img_source'] = image_1
 
             # img1
             img_1_url = item['image_1']
@@ -119,7 +119,6 @@ class Dataset(Dataset):
             else:
                 pil_image = url_to_img(img_1_url)
             image_1 = self.preprocess(pil_image)
-            list_of_dicts[j]['image_1'] = image_1
 
             # img2
             img_2_url = item['image_2']
@@ -130,7 +129,17 @@ class Dataset(Dataset):
             else:
                 pil_image = url_to_img(img_2_url)
             image_2 = self.preprocess(pil_image)
-            list_of_dicts[j]['image_2'] = image_2
+
+            # res
+            result = list_of_dicts[j]['result']
+            if result == 'img1':
+                list_of_dicts[j]['img_better'] = image_1
+                list_of_dicts[j]['img_worse'] = image_2
+            elif result == 'img2':
+                list_of_dicts[j]['img_better'] = image_2
+                list_of_dicts[j]['img_worse'] = image_1
+            else:
+                print(f'Wrong result output {result}')
 
             # txt: tgt and src
             target_prompt = list_of_dicts[j]['target_prompt']

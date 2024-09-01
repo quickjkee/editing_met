@@ -44,16 +44,16 @@ class MLP(nn.Module):
         
         self.layers = nn.Sequential(
             nn.Linear(self.input_size, 1024),
-            #nn.ReLU(),
+            nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(1024, 128),
-            #nn.ReLU(),
+            nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(128, 64),
-            #nn.ReLU(),
+            nn.ReLU(),
             nn.Dropout(0.1),
             nn.Linear(64, 16),
-            #nn.ReLU(),
+            nn.ReLU(),
             nn.Linear(16, 1)
         )
         
@@ -131,14 +131,19 @@ class ImageReward(nn.Module):
 
 
     def encode_pair(self, batch_data):
-        text_ids, text_mask, img_better, img_worse = batch_data['text_ids'], batch_data['text_mask'], batch_data['img_better'], batch_data['img_worse']
+        text_ids, text_mask = batch_data['text_ids_target'], batch_data['text_mask_target']
+        img_better, img_worse, img_source = batch_data['img_better'], batch_data['img_worse'], batch_data['img_source']
         text_ids = text_ids.view(text_ids.shape[0], -1).to(self.device) # [batch_size, seq_len]
         text_mask = text_mask.view(text_mask.shape[0], -1).to(self.device) # [batch_size, seq_len]
         img_better = img_better.to(self.device) # [batch_size, C, H, W]
         img_worse = img_worse.to(self.device) # [batch_size, C, H, W]
+
+        # encode source emb
+        image_embeds_source = self.blip.visual_encoder(img_source)
         
         # encode better emb
         image_embeds_better = self.blip.visual_encoder(img_better)
+        image_embeds_better = torch.cat((image_embeds_better, image_embeds_source), dim=0)
         image_atts_better = torch.ones(image_embeds_better.size()[:-1], dtype=torch.long).to(self.device)
         emb_better = self.blip.text_encoder(text_ids,
                                             attention_mask = text_mask,
@@ -150,6 +155,7 @@ class ImageReward(nn.Module):
         
         # encode worse emb
         image_embeds_worse = self.blip.visual_encoder(img_worse)
+        image_embeds_worse = torch.cat((image_embeds_worse, image_embeds_source), dim=0)
         image_atts_worse = torch.ones(image_embeds_worse.size()[:-1], dtype=torch.long).to(self.device)
         emb_worse = self.blip.text_encoder(text_ids,
                                             attention_mask = text_mask,
@@ -163,54 +169,6 @@ class ImageReward(nn.Module):
         batch_data = {
             'emb_better': emb_better,
             'emb_worse': emb_worse,
-        }
-
-        return batch_data
-
-
-    def encode_data(self, batch_data):
-        
-        txt_better, txt_worse = [], []
-
-        for item in batch_data:
-            
-            text_input = self.blip.tokenizer(item["prompt"], padding='max_length', truncation=True, max_length=35, return_tensors="pt").to(self.device)
-            
-            txt_set = []
-            for generations in item["generations"]:
-                # image encode
-                img_path = os.path.join(config['image_base'], generations)
-                pil_image = Image.open(img_path)
-                image = self.preprocess(pil_image).unsqueeze(0).to(self.device)
-                image_embeds = self.blip.visual_encoder(image)
-                
-                # text encode cross attention with image
-                image_atts = torch.ones(image_embeds.size()[:-1],dtype=torch.long).to(self.device)
-                text_output = self.blip.text_encoder(text_input.input_ids,
-                                                     attention_mask = text_input.attention_mask,
-                                                     encoder_hidden_states = image_embeds,
-                                                     encoder_attention_mask = image_atts,
-                                                     return_dict = True,
-                                                    )
-                txt_set.append(text_output.last_hidden_state[:,0,:])
-                
-            labels = item["ranking"]
-            for id_l in range(len(labels)):
-                for id_r in range(id_l+1, len(labels)):
-                    if labels[id_l] < labels[id_r]:
-                        txt_better.append(txt_set[id_l])
-                        txt_worse.append(txt_set[id_r])
-                    elif labels[id_l] > labels[id_r]:
-                        txt_better.append(txt_set[id_r])
-                        txt_worse.append(txt_set[id_l])
-
-        # torch.Size([sample_num, feature_dim])
-        txt_better = torch.cat(txt_better, 0).float()
-        txt_worse = torch.cat(txt_worse, 0).float()
-        
-        batch_data = {
-            'emb_better': txt_better,
-            'emb_worse': txt_worse,
         }
 
         return batch_data
