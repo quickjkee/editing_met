@@ -13,7 +13,6 @@ df = parser.raw_to_df()
 train_df, test_df = train_test_split(df, test_size=0.2, random_state=0)
 train_dataset = Dataset(train_df,
                         local_path=root)
-print(train_dataset[0])
 test_dataset = Dataset(test_df,
                        local_path=root)
 # -------------------------------------------------

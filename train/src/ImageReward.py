@@ -43,17 +43,17 @@ class MLP(nn.Module):
         self.input_size = input_size
         
         self.layers = nn.Sequential(
-            nn.Linear(self.input_size, 1024),
-            nn.ReLU(),
+            nn.Linear(2 * self.input_size, 1024),
+#            nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(1024, 128),
-            nn.ReLU(),
+#            nn.ReLU(),
             nn.Dropout(0.2),
             nn.Linear(128, 64),
-            nn.ReLU(),
+#            nn.ReLU(),
             nn.Dropout(0.1),
             nn.Linear(64, 16),
-            nn.ReLU(),
+#            nn.ReLU(),
             nn.Linear(16, 1)
         )
         
@@ -85,7 +85,7 @@ class ImageReward(nn.Module):
                 parms.requires_grad_(False)
         
         # fix certain ratio of layers
-        self.image_layer_num = 24 if config['BLIP']['vit'] == 'large' else 12
+        self.image_layer_num = 32 if config['BLIP']['vit'] == 'large' else 12
         if opts.fix_rate > 0:
             text_fix_num = "layer.{}".format(int(12 * opts.fix_rate))
             image_fix_num = "blocks.{}".format(int(self.image_layer_num * opts.fix_rate))
@@ -115,16 +115,12 @@ class ImageReward(nn.Module):
     def forward(self, batch_data):
         
         # encode data
-        if opts.rank_pair:
-            batch_data = self.encode_pair(batch_data)
-        else:
-            batch_data = self.encode_data(batch_data)
+        batch_data = self.encode_pair(batch_data)
         
         # forward
-        emb_better, emb_worse = batch_data['emb_better'], batch_data['emb_worse']
-        
-        reward_better = self.mlp(emb_better)
-        reward_worse = self.mlp(emb_worse)
+        emb_better, emb_worse, emb_source = batch_data['emb_better'], batch_data['emb_worse'], batch_data['emb_source']
+        reward_better = self.mlp(torch.cat((emb_better, emb_source), dim=1))
+        reward_worse = self.mlp(torch.cat((emb_worse, emb_source), dim=1))
         reward = torch.concat((reward_better, reward_worse), dim=1)
         
         return reward
@@ -132,18 +128,31 @@ class ImageReward(nn.Module):
 
     def encode_pair(self, batch_data):
         text_ids, text_mask = batch_data['text_ids_target'], batch_data['text_mask_target']
+        text_ids_source, text_mask_source = batch_data['text_ids_source'], batch_data['text_mask_source']
         img_better, img_worse, img_source = batch_data['img_better'], batch_data['img_worse'], batch_data['img_source']
+
         text_ids = text_ids.view(text_ids.shape[0], -1).to(self.device) # [batch_size, seq_len]
         text_mask = text_mask.view(text_mask.shape[0], -1).to(self.device) # [batch_size, seq_len]
+        text_ids_source = text_ids_source.view(text_ids_source.shape[0], -1).to(self.device) # [batch_size, seq_len]
+        text_mask_source = text_mask_source.view(text_mask_source.shape[0], -1).to(self.device) # [batch_size, seq_len]
+
         img_better = img_better.to(self.device) # [batch_size, C, H, W]
         img_worse = img_worse.to(self.device) # [batch_size, C, H, W]
 
         # encode source emb
-        image_embeds_source = self.blip.visual_encoder(img_source.to(self.device))
-        
+        with torch.no_grad():
+            image_embeds_source = self.blip.visual_encoder(img_source.to(self.device))
+            image_atts_source = torch.ones(image_embeds_source.size()[:-1], dtype=torch.long).to(self.device)
+            emb_source = self.blip.text_encoder(text_ids_source,
+                                            attention_mask = text_mask_source,
+                                            encoder_hidden_states = image_embeds_source,
+                                            encoder_attention_mask = image_atts_source,
+                                            return_dict = True,
+                                           ).last_hidden_state # [batch_size, seq_len, feature_dim]
+            emb_source = emb_source[:, 0, :].float()        
+
         # encode better emb
         image_embeds_better = self.blip.visual_encoder(img_better.to(self.device))
-        image_embeds_better = torch.cat((image_embeds_better, image_embeds_source), dim=1)
         image_atts_better = torch.ones(image_embeds_better.size()[:-1], dtype=torch.long).to(self.device)
         emb_better = self.blip.text_encoder(text_ids,
                                             attention_mask = text_mask,
@@ -155,7 +164,6 @@ class ImageReward(nn.Module):
         
         # encode worse emb
         image_embeds_worse = self.blip.visual_encoder(img_worse.to(self.device))
-        image_embeds_worse = torch.cat((image_embeds_worse, image_embeds_source), dim=1)
         image_atts_worse = torch.ones(image_embeds_worse.size()[:-1], dtype=torch.long).to(self.device)
         emb_worse = self.blip.text_encoder(text_ids,
                                             attention_mask = text_mask,
@@ -169,6 +177,7 @@ class ImageReward(nn.Module):
         batch_data = {
             'emb_better': emb_better,
             'emb_worse': emb_worse,
+            'emb_source': emb_source
         }
 
         return batch_data

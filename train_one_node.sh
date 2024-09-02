@@ -10,10 +10,10 @@ train_options=" \
        --epochs 10 \
        --distributed True \
        --gpu_num ${NUM_GPUS_PER_WORKER} \
-       --gpu_id '0,5' \
+       --gpu_id '1,7' \
        --clear_visualizer \
        --fix_rate 0.7 \
-       --lr 1e-05 \
+       --lr 5e-04 \
        --lr-decay-style cosine \
        --warmup 0.0 \
        --rank_pair \

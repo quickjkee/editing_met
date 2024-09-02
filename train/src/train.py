@@ -41,13 +41,14 @@ def init_seeds(seed, cuda_deterministic=True):
 
 
 def loss_func(reward):
-    
     target = torch.zeros(reward.shape[0], dtype=torch.long).to(reward.device)
     loss_list = F.cross_entropy(reward, target, reduction='none')
     loss = torch.mean(loss_list)
     
-    reward_diff = reward[:, 0] - reward[:, 1]
-    acc = torch.mean((reward_diff > 0).clone().detach().float())
+    with torch.no_grad():
+        reward_diff = reward[:, 0] - reward[:, 1]
+        print(torch.mean(reward[:, 0]), torch.mean(reward[:, 1]))
+        acc = torch.mean((reward_diff > 0).clone().detach().float())
     
     return loss, loss_list, acc
 
@@ -56,8 +57,8 @@ def run_train(train_dataset,
               valid_dataset,
               test_dataset):
     
-    if opts.std_log:
-        std_log()
+#    if opts.std_log:
+#        std_log()
 
     if opts.distributed:
         torch.distributed.init_process_group(backend="nccl")
@@ -70,7 +71,7 @@ def run_train(train_dataset,
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         init_seeds(opts.seed)
 
-    writer = visualizer()
+#    writer = visualizer()
     
     if opts.distributed:
         train_sampler = DistributedSampler(train_dataset)
@@ -78,8 +79,8 @@ def run_train(train_dataset,
     else:
         train_loader = DataLoader(train_dataset, batch_size=opts.batch_size, shuffle=True, collate_fn=collate_fn if not opts.rank_pair else None)
     
-    valid_loader = DataLoader(valid_dataset, batch_size=opts.batch_size, shuffle=True, collate_fn=collate_fn if not opts.rank_pair else None)
-    test_loader = DataLoader(test_dataset, batch_size=opts.batch_size, shuffle=True, collate_fn=collate_fn if not opts.rank_pair else None)
+    valid_loader = DataLoader(valid_dataset, batch_size=opts.batch_size, shuffle=False, collate_fn=collate_fn if not opts.rank_pair else None)
+    test_loader = DataLoader(test_dataset, batch_size=opts.batch_size, shuffle=False, collate_fn=collate_fn if not opts.rank_pair else None)
 
     # Set the training iterations.
     opts.train_iters = opts.epochs * len(train_loader)
@@ -92,6 +93,9 @@ def run_train(train_dataset,
     
     if opts.preload_path:
         model = preload_model(model)
+    pytorch_total_params = sum(p.numel() for p in model.parameters())
+    pytorch_train_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f'Total n. of params: {pytorch_total_params}, trainable: {pytorch_train_params}')
     
     optimizer = torch.optim.Adam(model.parameters(), lr=opts.lr, betas=(opts.adam_beta1, opts.adam_beta2), eps=opts.adam_eps)
     scheduler = get_learning_rate_scheduler(optimizer, opts)
@@ -112,9 +116,9 @@ def run_train(train_dataset,
     
         # record valid and save best model
         valid_loss = torch.cat(valid_loss, 0)
-        print('Validation - Iteration %d | Loss %6.5f | Acc %6.4f' % (0, torch.mean(valid_loss), sum(valid_acc_list) / len(valid_acc_list)))
-        writer.add_scalar('Validation-Loss', torch.mean(valid_loss), global_step=0)
-        writer.add_scalar('Validation-Acc', sum(valid_acc_list) / len(valid_acc_list), global_step=0)
+        print('Validation - Iteration %d | Loss %6.10f | Acc %6.4f' % (0, torch.mean(valid_loss), sum(valid_acc_list) / len(valid_acc_list)))
+ #       writer.add_scalar('Validation-Loss', torch.mean(valid_loss), global_step=0)
+ #       writer.add_scalar('Validation-Acc', sum(valid_acc_list) / len(valid_acc_list), global_step=0)
             
 
     best_loss = 1e9
@@ -148,9 +152,9 @@ def run_train(train_dataset,
                 # train result print and log 
                 if get_rank() == 0:
                     losses_log = torch.cat(losses, 0)
-                    print('Iteration %d | Loss %6.5f | Acc %6.4f' % (train_iteration, torch.mean(losses_log), sum(acc_list) / len(acc_list)))
-                    writer.add_scalar('Train-Loss', torch.mean(losses_log), global_step=train_iteration)
-                    writer.add_scalar('Train-Acc', sum(acc_list) / len(acc_list), global_step=train_iteration)
+                    print('Iteration %d | Loss %6.10f | Acc %6.4f' % (train_iteration, torch.mean(losses_log), sum(acc_list) / len(acc_list)))
+ #                   writer.add_scalar('Train-Loss', torch.mean(losses_log), global_step=train_iteration)
+ #                   writer.add_scalar('Train-Acc', sum(acc_list) / len(acc_list), global_step=train_iteration)
                     
                 losses.clear()
                 acc_list.clear()
@@ -170,9 +174,9 @@ def run_train(train_dataset,
                 
                     # record valid and save best model
                     valid_loss = torch.cat(valid_loss, 0)
-                    print('Validation - Iteration %d | Loss %6.5f | Acc %6.4f' % (train_iteration, torch.mean(valid_loss), sum(valid_acc_list) / len(valid_acc_list)))
-                    writer.add_scalar('Validation-Loss', torch.mean(valid_loss), global_step=train_iteration)
-                    writer.add_scalar('Validation-Acc', sum(valid_acc_list) / len(valid_acc_list), global_step=train_iteration)
+                    print('Validation - Iteration %d | Loss %6.10f | Acc %6.4f' % (train_iteration, torch.mean(valid_loss), sum(valid_acc_list) / len(valid_acc_list)))
+  #                  writer.add_scalar('Validation-Loss', torch.mean(valid_loss), global_step=train_iteration)
+  #                  writer.add_scalar('Validation-Acc', sum(valid_acc_list) / len(valid_acc_list), global_step=train_iteration)
                         
                     if torch.mean(valid_loss) < best_loss:
                         print("Best Val loss so far. Saving model")
